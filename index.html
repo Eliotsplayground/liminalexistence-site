@@ -1,0 +1,196 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Liminal Existence</title>
+  <!-- Google Font: Roboto -->
+  <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;700&display=swap" rel="stylesheet">
+  <style>
+    /* Global reset and font */
+    * { margin:0; padding:0; box-sizing: border-box; }
+    body { font-family: 'Roboto', sans-serif; color: #333; overflow: hidden; }
+    .container { width:100vw; height:100vh; display:flex; align-items:center; justify-content:center; }
+    /* Intro Screen */
+    #intro { text-align:left; max-width: 40%; line-height:1.4; }
+    #intro p { margin-bottom: 1rem; }
+    #intro .arrow { font-size:2rem; cursor:pointer; margin-top:1rem; display:inline-block; }
+    /* Wheel Screen */
+    #wheel, #space { display:none; }
+    #back { position:absolute; top:1rem; left:1rem; font-size:1.5rem; cursor:pointer; color:#aaa; }
+    #wheel svg { max-width: 50vw; }
+    #wheel text { font-size: 0.9rem; fill: #666; cursor: pointer; }
+    #wheel path { fill: #eee; stroke:#ccc; cursor: pointer; }
+    #wheel path:hover { fill-opacity: 0.8; }
+    /* Space (dot) Screen */
+    #space svg { max-width: 60vw; }
+    .dot { position:absolute; width: 10px; height: 10px; border-radius:50%; }
+  </style>
+</head>
+<body>
+  <div id="intro" class="container">
+    <div>
+      <p>Hey Friend,<br>
+      To get you started, this ‘dot’ represents You.</p>
+      <p>The circumference is the liminal space between what’s happening in your life, and what comes next.</p>
+      <p>This is a place of pause. Something in between.</p>
+      <p>You may hang out here for as long as you need.</p>
+      <p>From time to time, you will see other souls appear within the circle. These individuals are in the same boat as you. They may be strangers, but you are not alone.</p>
+      <p>This is not a place where you need words to feel each other. This is a place of companionship through resonance alone.</p>
+      <p>You see, we may not always understand each other, but we’re all the same.</p>
+      <p>And I hope you find solace here, knowing at least one other person, ‘Me’, has been where you are at. This is why I made this space. Because I was alone in mine, but not really. I just didn’t know others felt the same way. I hope for you, it will be more apparent.</p>
+      <div class="arrow" onclick="showWheel()">→</div>
+    </div>
+  </div>
+
+  <!-- Feelings Wheel -->
+  <div id="wheel" class="container">
+    <div id="back" onclick="goBack()">←</div>
+    <!-- Simple 7-wedge wheel generated via inline SVG -->
+    <svg viewBox="0 0 400 400">
+      <!-- Draw 7 wedges -->
+      <g transform="translate(200,200)">
+        <!-- Generate in script -->
+      </g>
+    </svg>
+  </div>
+
+  <!-- Liminal Space (dots) -->
+  <div id="space" class="container">
+    <div id="back" onclick="goBack()">←</div>
+    <div style="position:relative; width:60vw; height:60vw;">
+      <svg viewBox="0 0 400 400" style="position:absolute; top:0; left:0;">
+        <circle cx="200" cy="200" r="190" fill="none" stroke="#ccc"/>
+      </svg>
+    </div>
+  </div>
+
+  <!-- Firebase SDKs -->
+  <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-database-compat.js"></script>
+  <script>
+    // ====== Firebase config ======
+    const firebaseConfig = {
+      apiKey: "AIzaSyAyojhlJalsVqfTiXsukMr22Wlw06K6MEQ",
+      authDomain: "liminal-space-b9701.firebaseapp.com",
+      databaseURL: "https://liminal-space-b9701-default-rtdb.firebaseio.com",
+      projectId: "liminal-space-b9701",
+      storageBucket: "liminal-space-b9701.firebasestorage.app",
+      messagingSenderId: "84406710181",
+      appId: "1:84406710181:web:a171d7364a0a0d34e1024c"
+    };
+    firebase.initializeApp(firebaseConfig);
+    const db = firebase.database();
+
+    // ====== App state ======
+    const emotions = [ 'sad','angry','disgusted','happy','surprised','bad','fearful' ];
+    let selectedEmotion = null;
+    const userId = Math.random().toString(36).substr(2,9);
+    let presenceRef;
+
+    // ====== DOM refs ======
+    const introEl = document.getElementById('intro');
+    const wheelEl = document.getElementById('wheel');
+    const spaceEl = document.getElementById('space');
+    const wheelGroup = wheelEl.querySelector('svg g');
+    const spaceContainer = spaceEl.querySelector('div[style]');
+
+    // ====== Show wheel screen ======
+    function showWheel(){
+      introEl.style.display='none';
+      spaceEl.style.display='none';
+      wheelEl.style.display='flex';
+      drawWheel();
+    }
+    function goBack(){
+      // cleanup presence listener
+      if(presenceRef) presenceRef.remove();
+      introEl.style.display='none';
+      spaceEl.style.display='none';
+      wheelEl.style.display='flex';
+    }
+
+    // ====== Draw the 7-wedge wheel ======
+    function drawWheel(){
+      wheelGroup.innerHTML='';
+      const sliceAngle = 360 / emotions.length;
+      emotions.forEach((emo,i)=>{
+        const angle = sliceAngle * i;
+        const path = document.createElementNS('http://www.w3.org/2000/svg','path');
+        const rad = Math.PI/180;
+        const x1 = Math.cos(rad*angle)*200;
+        const y1 = Math.sin(rad*angle)*200;
+        const x2 = Math.cos(rad*(angle+sliceAngle))*200;
+        const y2 = Math.sin(rad*(angle+sliceAngle))*200;
+        const d = `M0,0 L${x1},${y1} A200,200 0 0,1 ${x2},${y2} Z`;
+        path.setAttribute('d',d);
+        path.onclick = ()=> selectEmotion(emo);
+        path.onmouseover = ()=> path.setAttribute('fill','#ddd');
+        path.onmouseout  = ()=> path.setAttribute('fill','#eee');
+        path.setAttribute('fill','#eee');
+        path.setAttribute('stroke','#ccc');
+        wheelGroup.appendChild(path);
+
+        // label
+        const text = document.createElementNS('http://www.w3.org/2000/svg','text');
+        const midAngle = angle+sliceAngle/2;
+        const tx = Math.cos(rad*midAngle)*120;
+        const ty = Math.sin(rad*midAngle)*120;
+        text.setAttribute('x',tx);
+        text.setAttribute('y',ty+5);
+        text.textContent = emo.charAt(0).toUpperCase()+emo.slice(1);
+        text.onclick = ()=> selectEmotion(emo);
+        wheelGroup.appendChild(text);
+      });
+    }
+
+    // ====== Emotion selected ======
+    function selectEmotion(emo){
+      selectedEmotion = emo;
+      wheelEl.style.display='none';
+      spaceEl.style.display='flex';
+      startPresence();
+    }
+
+    // ====== Presence in Realtime DB ======
+    function startPresence(){
+      const url = `presence/${selectedEmotion}`;
+      presenceRef = db.ref(`${url}/${userId}`);
+      // assign random pastel color
+      const hue = Math.floor(Math.random()*360);
+      const pastel = `hsl(${hue},70%,80%)`;
+      presenceRef.set({ color: pastel });
+      presenceRef.onDisconnect().remove();
+
+      // listen for all
+      const listRef = db.ref(url);
+      listRef.on('value', snap=>{
+        const data = snap.val()||{};
+        drawDots(Object.entries(data));
+      });
+    }
+
+    // ====== Draw dots inside circle ======
+    function drawDots(list){
+      // clear old
+      Array.from(spaceContainer.getElementsByClassName('dot')).forEach(el=>el.remove());
+      const width = spaceContainer.clientWidth;
+      const r = width/2;
+      list.forEach(([id,info])=>{
+        const dot = document.createElement('div');
+        dot.classList.add('dot');
+        // random position inside circle
+        let x,y;
+        do{
+          x = Math.random()*width;
+          y = Math.random()*width;
+        } while(((x-r)**2 + (y-r)**2) > (r-10)**2);
+        dot.style.left = `${x-5}px`;
+        dot.style.top  = `${y-5}px`;
+        dot.style.background = id===userId? '#333': info.color;
+        spaceContainer.appendChild(dot);
+      });
+    }
+  </script>
+</body>
+</html>
